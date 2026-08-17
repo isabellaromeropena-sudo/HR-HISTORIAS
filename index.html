@@ -584,7 +584,7 @@
     </div>
     <div class="doc-title">
       <strong>Registro Digital</strong>
-      <span>Carrera 1 #32a-14, Palmira (Valle)</span>
+      <span>Calle 35E # 2E-61, Palmira (Valle)</span>
     </div>
     <button type="button" id="logoutBtn" class="logout-btn" title="Cerrar sesión">Cerrar sesión</button>
   </header>
@@ -949,7 +949,8 @@
           nombres: d.nombres || '',
           apellidos: d.apellidos || '',
           tipoDocumento: d.tipoDocumento || '',
-          numeroDocumento: d.numeroDocumento || ''
+          numeroDocumento: d.numeroDocumento || '',
+          createdAt: d.createdAt || 0
         };
       });
       indexLoaded = true;
@@ -973,7 +974,7 @@
   function renderList(){
     const q = searchInput.value.trim();
     const filtered = index.filter(p => matchesQuery(p, q))
-      .sort((a,b) => (a.apellidos||'').localeCompare(b.apellidos||'', 'es'));
+      .sort((a,b) => (a.createdAt||0) - (b.createdAt||0));
 
     listMeta.textContent = indexLoaded
       ? (filtered.length + (filtered.length === 1 ? ' paciente' : ' pacientes') + (q ? ' encontrados' : ' registrados'))
@@ -1049,6 +1050,18 @@
     btnSave.textContent = 'Guardando…';
     try{
       const id = currentId || uid();
+
+      // conserva la fecha de creación original si el paciente ya existía;
+      // si es nuevo, le asigna el momento actual (para poder ordenar por orden de ingreso)
+      let createdAt = null;
+      if (currentId){
+        try{
+          const existing = await storage.get(patientKey(id));
+          if (existing && existing.value) createdAt = JSON.parse(existing.value).createdAt || null;
+        }catch(e){}
+      }
+      data.createdAt = createdAt || Date.now();
+
       const result = await storage.set(patientKey(id), JSON.stringify(data));
       if (!result) throw new Error('storage set failed');
 
